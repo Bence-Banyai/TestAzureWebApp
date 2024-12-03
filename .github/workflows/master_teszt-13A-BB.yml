@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - teszt-13A-BB
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to registry
+      uses: docker/login-action@v2
+      with:
+        registry: https://ghcr.io/
+        username: ${{ secrets.AzureAppService_ContainerUsername_0bf8448b305b432382bd09a3a18e715e }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_e53dc838366a401e9000829876f285a0 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: ghcr.io/${{ secrets.AzureAppService_ContainerUsername_0bf8448b305b432382bd09a3a18e715e }}/bence-banyai/test-azure-webapp:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'teszt-13A-BB'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_74bde1dc5c2145e8b34df3f635ddb4a6 }}
+        images: 'ghcr.io/${{ secrets.AzureAppService_ContainerUsername_0bf8448b305b432382bd09a3a18e715e }}/bence-banyai/test-azure-webapp:${{ github.sha }}'
